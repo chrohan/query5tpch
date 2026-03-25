@@ -9,36 +9,38 @@
 #include <algorithm>
 #include <map>
 
+using namespace std;
+
 // TODO: Include additional headers as needed
 
 int main(int argc, char* argv[]) {
-    std::string r_name, start_date, end_date, table_path, result_path;
+    string r_name, start_date, end_date, table_path, result_path;
     int num_threads;
 
     if (!parseArgs(argc, argv, r_name, start_date, end_date, num_threads, table_path, result_path)) {
-        std::cerr << "Failed to parse command line arguments." << std::endl;
+        cerr << "Failed to parse command line arguments." << endl;
         return 1;
     }
 
-    std::vector<std::map<std::string, std::string>> customer_data, orders_data, lineitem_data, supplier_data, nation_data, region_data;
+    vector<map<string,string>> customer_data, orders_data, lineitem_data, supplier_data, nation_data, region_data;
 
     if (!readTPCHData(table_path, customer_data, orders_data, lineitem_data, supplier_data, nation_data, region_data)) {
-        std::cerr << "Failed to read TPCH data." << std::endl;
+        cerr << "Failed to read TPCH data." << endl;
         return 1;
     }
 
-    std::map<std::string, double> results;
+    map<string, double> results;
 
     if (!executeQuery5(r_name, start_date, end_date, num_threads, customer_data, orders_data, lineitem_data, supplier_data, nation_data, region_data, results)) {
-        std::cerr << "Failed to execute TPCH Query 5." << std::endl;
+        cerr << "Failed to execute TPCH Query 5." << endl;
         return 1;
     }
 
     if (!outputResults(result_path, results)) {
-        std::cerr << "Failed to output results." << std::endl;
+        cerr << "Failed to output results." << endl;
         return 1;
     }
 
-    std::cout << "TPCH Query 5 implementation completed." << std::endl;
+    cout << "TPCH Query 5 implementation completed." << endl;
     return 0;
 } 
