@@ -40,8 +40,12 @@ bool parseArgs(int argc, char* argv[], std::string& r_name, std::string& start_d
 }
 
 // Function to read TPCH data from the specified paths
-bool readTPCHData(const std::string& table_path, std::vector<std::map<std::string, std::string>>& customer_data, std::vector<std::map<std::string, std::string>>& orders_data, std::vector<std::map<std::string, std::string>>& lineitem_data, std::vector<std::map<std::string, std::string>>& supplier_data, std::vector<std::map<std::string, std::string>>& nation_data, std::vector<std::map<std::string, std::string>>& region_data) {
-    // TODO: Implement reading TPCH data from files
+bool readTPCHData(const string& table_path, vector<map<string,string>>& customer_data, vector<map<string, string>>& orders_data, vector<map<string, string>>& lineitem_data, vector<map<string, string>>& supplier_data, vector<map<string, string>>& nation_data, vector<map<string, string>>& region_data) {
+    //logic to read from path
+
+    //go through the query and list all the columns that are needed only
+
+    // store them in maps and check for empty 
     return false;
 }
 
