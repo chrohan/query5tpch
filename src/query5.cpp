@@ -97,9 +97,105 @@ bool readTPCHData(const string& table_path, vector<map<string,string>>& customer
 }
 
 // Function to execute TPCH Query 5 using multithreading
-bool executeQuery5(const std::string& r_name, const std::string& start_date, const std::string& end_date, int num_threads, const std::vector<std::map<std::string, std::string>>& customer_data, const std::vector<std::map<std::string, std::string>>& orders_data, const std::vector<std::map<std::string, std::string>>& lineitem_data, const std::vector<std::map<std::string, std::string>>& supplier_data, const std::vector<std::map<std::string, std::string>>& nation_data, const std::vector<std::map<std::string, std::string>>& region_data, std::map<std::string, double>& results) {
-    // TODO: Implement TPCH Query 5 using multithreading
-    return false;
+bool executeQuery5(const std::string& r_name, const std::string& start_date, const std::string& end_date, int num_threads,
+     const std::vector<std::map<std::string, std::string>>& customer_data, 
+     const std::vector<std::map<std::string, std::string>>& orders_data, 
+     const std::vector<std::map<std::string, std::string>>& lineitem_data, 
+     const std::vector<std::map<std::string, std::string>>& supplier_data, 
+     const std::vector<std::map<std::string, std::string>>& nation_data, 
+     const std::vector<std::map<std::string, std::string>>& region_data, std::map<std::string, double>& results) {
+// where 
+// c_custkey = o_custkey 
+// and l_orderkey = o_orderkey 
+// and l_suppkey = s_suppkey 
+// and c_nationkey = s_nationkey 
+// and s_nationkey = n_nationkey                     3. suppliers,   4. customer  both same nation,  6. use supplier to get l 5. get order, custo, revenue
+// and n_regionkey = r_regionkey                     2. find nation
+// and r_name = 'ASIA'                               1. find region
+// and o_orderdate >= '1994-01-01' 
+// and o_orderdate < '1995-01-01' 
+
+    //getting required region
+     string regionkey = "";
+
+     for(auto& region : region_data){
+        // if(region.find("r_name") != region.end() && region["r_name"] == r_name){
+        //     regionkey = region["r_regionkey"];
+        if(region.at("r_name") == r_name){
+            regionkey = region.at("r_regionkey");
+            break;
+        }
+     }
+
+     if(regionkey.size() == 0){
+        cout << "Region not found" << endl;
+        return false;
+     }
+
+     //getting all the nations of the found region
+     map<string,string> nationkey_to_name;
+
+     for(auto& nation : nation_data){
+        if(nation.at("n_regionkey") == regionkey){
+            string key = nation.at("n_nationakey");
+            string value = nation.at("n_name");
+            nationkey_to_name[key] = value;
+        }
+     }
+
+
+     //getting all the suppliers of those nation
+     map<string,string> suppkey_to_nationkey;
+     for(auto& suppliers : supplier_data){
+        string s_nation = suppliers.at("s_nationkey");
+        if(nationkey_to_name.find(s_nation) != nationkey_to_name.end()){
+            suppkey_to_nationkey[suppliers.at("s_suppkey")] = s_nation;
+        }
+     }
+
+     //getting all the customers of those nations
+     map<string,string>custkey_to_nationkey;
+     for(auto& customers : customer_data){
+        string c_nation = customers.at("c_nationkey");
+        if(nationkey_to_name.find(c_nation) != nationkey_to_name.end()){
+            custkey_to_nationkey[customers.at("c_custkey")] = c_nation;
+        }
+     }
+
+
+     //getting orders from those nations
+     map<string,string>orderkey_to_nationkey;
+     for(auto& orders : orders_data){
+        string ckey = orders.at("o_custkey");
+        if(custkey_to_nationkey.find(ckey) == custkey_to_nationkey.end())continue;
+        if(orders.at("o_orderdate") < start_date || orders.at("o_orderdate") >= end_date)continue;
+
+        string nation = custkey_to_nationkey[ckey];
+        orderkey_to_nationkey[orders.at("o_orderkey")] = nation;
+
+     }
+
+     //logic for revenue calculn
+     for(auto& lineitems : lineitem_data){
+        string orderkey = lineitems.at("l_orderkey");
+        string suppkey = lineitems.at("l_suppkey");
+         
+        if(orderkey_to_nationkey.find(orderkey) == orderkey_to_nationkey.end())continue;
+        if(suppkey_to_nationkey.find(suppkey) == suppkey_to_nationkey.end())continue;
+        if(orderkey_to_nationkey[orderkey] != suppkey_to_nationkey[suppkey])continue;
+
+        // (l_extendedprice * (1 - l_discount)) as revenue 
+
+        double extendedprice = stod(lineitems.at("l_extendedprice"));
+        double discount = stod(lineitems.at("l_discount"));
+
+        double revenue = extendedprice * (1 - discount);
+
+        results[orderkey_to_nationkey[orderkey]] += revenue;
+
+     }
+return true;
+    
 }
 
 // Function to output results to the specified path
