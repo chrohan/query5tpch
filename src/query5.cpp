@@ -15,18 +15,19 @@ bool parseArgs(int argc, char* argv[], std::string& r_name, std::string& start_d
     // Example: --r_name ASIA --start_date 1994-01-01 --end_date 1995-01-01 --threads 4 --table_path /path/to/tables --result_path /path/to/results
      
     for(int i = 0; i < argc; i++) {
-        if(argv[i] == "--r_name"){
-            r_name = argv[i+1];   
-        }else if(argv[i] == "--start_date") {
-            start_date = argv[i+1];
-        }else if(argv[i] == "--end_date"){
-            end_date = argv[i+1];
-        }else if(argv[i] == "--threads"){
-            num_threads = stoi(argv[i+1]);
-        }else if(argv[i] == "--table_path") {
-            table_path = argv[i+1];
-        }else if(argv[i] == "--result_path") {
-            result_path = argv[i+1];
+        string arg = argv[i];
+        if(arg == "--r_name"){
+            r_name = argv[++i];   
+        }else if(arg == "--start_date") {
+            start_date = argv[++i];
+        }else if(arg == "--end_date"){
+            end_date = argv[++i];
+        }else if(arg == "--threads"){
+            num_threads = stoi(argv[++i]);
+        }else if(arg == "--table_path") {
+            table_path = argv[++i];
+        }else if(arg == "--result_path") {
+            result_path = argv[++i];
         }
     }
     
@@ -137,7 +138,7 @@ bool executeQuery5(const std::string& r_name, const std::string& start_date, con
 
      for(auto& nation : nation_data){
         if(nation.at("n_regionkey") == regionkey){
-            string key = nation.at("n_nationakey");
+            string key = nation.at("n_nationkey");
             string value = nation.at("n_name");
             nationkey_to_name[key] = value;
         }
@@ -191,19 +192,40 @@ bool executeQuery5(const std::string& r_name, const std::string& start_date, con
 
         double revenue = extendedprice * (1 - discount);
 
-        results[orderkey_to_nationkey[orderkey]] += revenue;
+        results[nationkey_to_name[orderkey_to_nationkey[orderkey]]] += revenue;
 
      }
 return true;
     
 }
 
+  bool cmp(pair<string,double>& a, pair<string,double>& b){
+    return a.second > b.second;
+  }
+
 // Function to output results to the specified path
 bool outputResults(const std::string& result_path, const std::map<std::string, double>& results) {
     //desc!!!!!!!!!!
-    
-    
 
+    vector< pair<string,double>> sorted_result;
 
-    return false;
+    for(auto& it : results){
+        sorted_result.push_back({it.first, it.second});
+    }
+
+    sort(sorted_result.begin() , sorted_result.end(), cmp);
+
+    ofstream file(result_path + "output.txt");
+    if(file.is_open() == false){
+        cout << "Failed to open output file" << endl;
+        return false;
+    }
+
+    file << "n_name" << "|" << "revenue" << "\n";
+    for(auto& entry : sorted_result){
+        file << entry.first << "|" << entry.second << "\n";
+    }
+
+    return true;
+
 } 
