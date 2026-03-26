@@ -39,14 +39,61 @@ bool parseArgs(int argc, char* argv[], std::string& r_name, std::string& start_d
 
 }
 
-// Function to read TPCH data from the specified paths
+
+bool readTable(const string& filename, const vector<int>& columns, const vector<string>& column_names, vector<map<string,string>>& table) {
+    ifstream file(filename);
+    if(file.is_open() == false){
+        cout << "failed to open file" << endl;
+        return false;
+    }
+    string line;
+    while(getline(file, line)){
+        if(line.size() == 0){
+            continue;
+        }
+        vector<string> allCols;
+
+        string curr = "";
+        for(int i = 0; i < line.size(); i++){
+             if(line[i] == '|'){
+                allCols.push_back(curr);
+                curr = "";
+             }else{
+                curr += line[i];
+             }
+        }
+        
+        map<string, string>row;
+
+        for(int i = 0; i < columns.size(); i++){
+            row[column_names[i]] = allCols[columns[i]];
+        }
+
+        table.push_back(row);
+    }
+
+    return true;
+
+}
 bool readTPCHData(const string& table_path, vector<map<string,string>>& customer_data, vector<map<string, string>>& orders_data, vector<map<string, string>>& lineitem_data, vector<map<string, string>>& supplier_data, vector<map<string, string>>& nation_data, vector<map<string, string>>& region_data) {
     //logic to read from path
+    // ifstream file(table_path);
+    // if(file.is_open() == false){
+    //     cout << "failed to open file" << endl;
+    //     return false;
+    // }
+   
+    //go through the query and list all the columns that are needed only and ignore rest by |
+    bool readCustomer = readTable(table_path + "customer.tbl", {0, 3}, {"c_custkey", "c_nationkey"}, customer_data);
+    bool readOrders = readTable(table_path + "orders.tbl", {0, 1, 4}, {"o_orderkey", "o_custkey", "o_orderdate"}, orders_data);
+    bool readLineitem = readTable(table_path + "lineitem.tbl",{0, 2, 5, 6},{"l_orderkey", "l_suppkey", "l_extendedprice", "l_discount"}, lineitem_data);
+    bool readSupplier = readTable(table_path + "supplier.tbl", {0, 3},{"s_suppkey", "s_nationkey"},supplier_data);
+    bool readNation = readTable(table_path + "nation.tbl", {0, 1, 2},{"n_nationkey", "n_name", "n_regionkey"}, nation_data);
+    bool readRegion = readTable(table_path + "region.tbl",{0, 1}, {"r_regionkey", "r_name"}, region_data);
 
-    //go through the query and list all the columns that are needed only
+    return readCustomer && readOrders && readLineitem && readSupplier && readNation && readRegion;
 
-    // store them in maps and check for empty 
-    return false;
+   
 }
 
 // Function to execute TPCH Query 5 using multithreading
