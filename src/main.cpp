@@ -32,10 +32,16 @@ int main(int argc, char* argv[]) {
 
     map<string, double> results;
 
+    auto start = chrono::high_resolution_clock::now();
+
     if (!executeQuery5(r_name, start_date, end_date, num_threads, customer_data, orders_data, lineitem_data, supplier_data, nation_data, region_data, results)) {
         cerr << "Failed to execute TPCH Query 5." << endl;
         return 1;
     }
+
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double> elapsed = end - start;
+    cout << "Runtime: " << elapsed.count() << " seconds" << endl;
 
     if (!outputResults(result_path, results)) {
         cerr << "Failed to output results." << endl;

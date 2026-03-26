@@ -97,6 +97,35 @@ bool readTPCHData(const string& table_path, vector<map<string,string>>& customer
    
 }
 
+//for multithreading
+void processLineitem(
+    int start,
+    int end,
+    const vector<map<string,string>>& lineitem_data,
+    const map<string,string>& orderkey_to_nationkey,
+    const map<string,string>& suppkey_to_nationkey,
+    const map<string,string>& nationkey_to_name,
+    map<string,double>& local_result)
+{
+    for(int i = start; i < end; i++){
+        string orderkey = lineitem_data[i].at("l_orderkey");
+        string suppkey  = lineitem_data[i].at("l_suppkey");
+
+        if(orderkey_to_nationkey.find(orderkey) == orderkey_to_nationkey.end()) continue;
+        if(suppkey_to_nationkey.find(suppkey) == suppkey_to_nationkey.end()) continue;
+        if(orderkey_to_nationkey.at(orderkey) != suppkey_to_nationkey.at(suppkey)) continue;
+
+        double extendedprice = stod(lineitem_data[i].at("l_extendedprice"));
+        double discount      = stod(lineitem_data[i].at("l_discount"));
+        double revenue       = extendedprice * (1 - discount);
+
+        local_result[nationkey_to_name.at(orderkey_to_nationkey.at(orderkey))] += revenue;
+    }
+}
+
+
+
+
 // Function to execute TPCH Query 5 using multithreading
 bool executeQuery5(const std::string& r_name, const std::string& start_date, const std::string& end_date, int num_threads,
      const std::vector<std::map<std::string, std::string>>& customer_data, 
@@ -177,24 +206,48 @@ bool executeQuery5(const std::string& r_name, const std::string& start_date, con
      }
 
      //logic for revenue calculn
-     for(auto& lineitems : lineitem_data){
-        string orderkey = lineitems.at("l_orderkey");
-        string suppkey = lineitems.at("l_suppkey");
+     //before multithreading
+    //  for(auto& lineitems : lineitem_data){
+    //     string orderkey = lineitems.at("l_orderkey");
+    //     string suppkey = lineitems.at("l_suppkey");
          
-        if(orderkey_to_nationkey.find(orderkey) == orderkey_to_nationkey.end())continue;
-        if(suppkey_to_nationkey.find(suppkey) == suppkey_to_nationkey.end())continue;
-        if(orderkey_to_nationkey[orderkey] != suppkey_to_nationkey[suppkey])continue;
+    //     if(orderkey_to_nationkey.find(orderkey) == orderkey_to_nationkey.end())continue;
+    //     if(suppkey_to_nationkey.find(suppkey) == suppkey_to_nationkey.end())continue;
+    //     if(orderkey_to_nationkey[orderkey] != suppkey_to_nationkey[suppkey])continue;
 
-        // (l_extendedprice * (1 - l_discount)) as revenue 
+    //     // (l_extendedprice * (1 - l_discount)) as revenue 
 
-        double extendedprice = stod(lineitems.at("l_extendedprice"));
-        double discount = stod(lineitems.at("l_discount"));
+    //     double extendedprice = stod(lineitems.at("l_extendedprice"));
+    //     double discount = stod(lineitems.at("l_discount"));
 
-        double revenue = extendedprice * (1 - discount);
+    //     double revenue = extendedprice * (1 - discount);
 
-        results[nationkey_to_name[orderkey_to_nationkey[orderkey]]] += revenue;
+    //     results[nationkey_to_name[orderkey_to_nationkey[orderkey]]] += revenue;
+     //}
 
-     }
+     //multithreading
+     // split lineitem across threads
+int total = lineitem_data.size();
+int chunk = total / num_threads;
+
+vector<map<string,double>> local_results(num_threads);
+
+vector<thread> threads;
+for(int i = 0; i < num_threads; i++){
+    int start = i * chunk;
+    int end   = (i == num_threads - 1) ? total : start + chunk;
+    threads.push_back(thread(processLineitem, start, end, ref(lineitem_data), ref(orderkey_to_nationkey), ref(suppkey_to_nationkey), ref(nationkey_to_name), ref(local_results[i])));
+}
+
+for(int i = 0; i < num_threads; i++){
+    threads[i].join();
+}
+
+for(int i = 0; i < num_threads; i++){
+    for(auto& entry : local_results[i]){
+        results[entry.first] += entry.second;
+    }
+}
 return true;
     
 }
